@@ -1,0 +1,45 @@
+from rasa.nlu.training_data import load_data
+from rasa.nlu.config import RasaNLUModelConfig
+from rasa.nlu.model import Trainer
+from rasa.nlu import config
+
+# Load training data
+training_data = load_data('data/nlu.md')
+
+# Create a configuration for the component pipeline
+pipeline = [
+    {"name": "SpacyNLP"},
+    {"name": "SpacyTokenizer"},
+    {"name": "SpacyFeaturizer"},
+    {"name": "RegexFeaturizer"},
+    {"name": "CRFEntityExtractor"},
+    {"name": "EntitySynonymMapper"},
+    {"name": "SklearnIntentClassifier"}
+]
+
+# Create a configuration for the model
+configuration = RasaNLUModelConfig({"pipeline": pipeline})
+
+# Create an instance of the trainer
+trainer = Trainer(config.load("nlu_config.yml"))
+
+# Train the model
+trainer.train(training_data)
+
+# Save the model to disk 
+model_directory = trainer.persist()
+
+# Create a Rasa Core agent
+agent = Agent('domain.yml', policies=[
+        MemoizationPolicy(),
+        KerasPolicy()
+])
+
+# Load training data for stories
+training_data = agent.load_data('data/stories.md')
+
+# Train the agent
+agent.train(training_data)
+
+# Run the bot
+agent.run()
